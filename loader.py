@@ -1,11 +1,8 @@
-import glob
 import os
 import random
 
 import numpy as np
 import soundfile as sf
-import librosa
-import librosa.feature
 import webrtcvad
 from pydub import AudioSegment
 
@@ -13,11 +10,12 @@ from config import config
 import torch
 from scipy.signal import convolve
 
+
 from python_speech_features import mfcc, delta
 
 
 class dataset_loader:
-    def __init__(self, speech_path, noise_path, noise_prob, rir_path=None,  rir_prob=None):
+    def __init__(self, speech_path: list, noise_path, noise_prob, rir_path=None,  rir_prob=None):
         self.speech_path = speech_path
         self.noise_path = noise_path
         self.rir_path=rir_path
@@ -28,11 +26,12 @@ class dataset_loader:
         self.isrir = None
 
         print('building data')
-        for path, subdirs, files in os.walk(self.speech_path):
-            for name in files:
-                # print(name)
-                if name.endswith('.wav') or name.endswith('.flac'):
-                    self.all_speech.append(os.path.join(path, name))
+        for subset in speech_path:
+            for path, subdirs, files in os.walk(subset):
+                for name in files:
+                    # print(name)
+                    if name.endswith('.wav') or name.endswith('.flac'):
+                        self.all_speech.append(os.path.join(path, name))
         for path, subdirs, files in os.walk(self.noise_path):
             for name in files:
                 # print(name)
@@ -116,7 +115,7 @@ class dataset_loader:
 
         label_chunk = [1 if vad.is_speech(f.tobytes(), sample_rate=config.sr) else 0 for f in
                        self.split_frames(sp_chunk_bytes)]
-        print(len(sp_chunk), len(label_chunk), len(ns_chunk))
+        print(label_chunk)
 
         return sp_chunk, label_chunk, ns_chunk, rir_data, sp_chunk_bytes
 
@@ -129,7 +128,6 @@ class dataset_loader:
             rir *= mult
             sp = convolve(sp, rir)
         if self.isns:
-            print(self.isns)
             mix_data = np.add(sp, self.coef_by_snr(sp, ns, snr))
         else:
             mix_data = sp
@@ -142,12 +140,5 @@ class dataset_loader:
 
 
 if __name__ == '__main__':
-    dataset = dataset_loader(r'D:\Datasets\LibriSpeech', r'D:\Datasets\noises', noise_prob=0.7)
-    dataset.get_random()
+    dataset = dataset_loader([r'D:\Datasets\LibriSpeech\train-clean-360', r'D:\Datasets\LibriSpeech\train-other-500'], r'D:\Datasets\noises', noise_prob=0.7)
     mfcc, delta, label, mix, spb = dataset.mix_generator(0)
-    #
-    # from visualizer import Visualize as V
-    #
-    # V.plot_sample(mix, label)
-    # V.plot_sample_webrtc(spb)
-    # V.plot_features(mfcc, delta)

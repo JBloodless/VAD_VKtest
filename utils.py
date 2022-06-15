@@ -23,7 +23,7 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, x, sources_mask=None, sources_key_padding_mask=None):
         # x: (batch_size, source_length, d_model)
-
+        print(x.shape, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         for layer_index, layer in enumerate(self.layers):
             x = layer(
                 x,
@@ -47,6 +47,7 @@ class TransformerEncoderLayer(nn.Module):
         self.feed_forward_sublayer = Sublayer(d_model=d_model, dropout=dropout)
 
     def forward(self, x, sources_mask=None, sources_key_padding_mask=None):
+        print(x.shape, '!!!!!!!!!!')
         x, _ = self.self_attention_sublayer(
             x,
             lambda x: self.self_attention(
@@ -69,6 +70,7 @@ class Sublayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
+        print(x.shape)
         # Residual connection to unnormalized value. Different from paper.
         sublayer_x, state = sublayer(self.layer_norm(x))
         x = self.dropout(sublayer_x) + x

@@ -20,4 +20,6 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 batch_size = 2048
 features = 24
 
+noise_snrs = [-5, 0, 5, 10]
+
 temp_folder = r'D:\vk_test\VAD\temp'

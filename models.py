@@ -14,8 +14,9 @@ class BiRNN(nn.Module):
     Bi-directional layer of gated recurrent units.
     Includes a fully connected layer to produce binary output.
     '''
-    def __init__(self, num_in, num_hidden, batch_size = config.batch_size, large = True, lstm = False, fcl = True,
-                 bidir = False):
+
+    def __init__(self, num_in, num_hidden, batch_size=config.batch_size, large=True, lstm=False, fcl=True,
+                 bidir=False):
         super(BiRNN, self).__init__()
 
         self.num_hidden, self.batch_size = num_hidden, batch_size
@@ -29,18 +30,18 @@ class BiRNN(nn.Module):
             self.rnn = GRU(num_in, num_hidden, num_layers=self.layers, bidirectional=self.bidir, batch_first=True)
             sz = 18
 
-        embed_sz = num_hidden*2 if self.bidir or self.layers > 1 else num_hidden
+        embed_sz = num_hidden * 2 if self.bidir or self.layers > 1 else num_hidden
 
         if not fcl:
             self.embed = nn.Linear(embed_sz, 2)
         else:
             if large:
                 self.embed = nn.Sequential(
-                    nn.Linear(embed_sz, sz+14),
-                    nn.BatchNorm1d(sz+14),
+                    nn.Linear(embed_sz, sz + 14),
+                    nn.BatchNorm1d(sz + 14),
                     nn.Dropout(p=0.2),
                     nn.ReLU(),
-                    nn.Linear(sz+14, sz),
+                    nn.Linear(sz + 14, sz),
                     nn.BatchNorm1d(sz),
                     nn.Dropout(p=0.2),
                     nn.ReLU(),
@@ -90,10 +91,11 @@ class GatedConv(nn.Module):
     Gated convolutional layer using tanh as activation and a sigmoidal gate.
     The convolution is padded to keep its original dimensions.
     '''
-    def __init__(self, in_channels, out_channels, kernel_size = 3, dilation = 1, padding = True):
+
+    def __init__(self, in_channels, out_channels, kernel_size=3, dilation=1, padding=True):
         super(GatedConv, self).__init__()
 
-        padding = int((kernel_size-1)/2) if padding else 0
+        padding = int((kernel_size - 1) / 2) if padding else 0
         self.conv = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, dilation=dilation, padding=padding),
             nn.BatchNorm1d(out_channels),
@@ -111,10 +113,10 @@ class GatedConv(nn.Module):
 
 class Conv(nn.Module):
 
-    def __init__(self, in_channels, out_channels, kernel_size = 3, dilation = 1, padding = True):
+    def __init__(self, in_channels, out_channels, kernel_size=3, dilation=1, padding=True):
         super(Conv, self).__init__()
 
-        padding = int((kernel_size-1)/2) if padding else 0
+        padding = int((kernel_size - 1) / 2) if padding else 0
         self.conv = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, dilation=dilation, padding=padding),
             nn.BatchNorm1d(out_channels),
@@ -133,12 +135,13 @@ class GatedResidualConv(nn.Module):
     residual connection that is added to the output of the following layer using
     element-wise multiplication. Input and output sizes are unchanged.
     '''
-    def __init__(self, channels, kernel_size = 3, dilation = 1):
+
+    def __init__(self, channels, kernel_size=3, dilation=1):
         super(GatedResidualConv, self).__init__()
 
         self.gated_conv = GatedConv(channels, channels)
 
-    def forward(self, x, r = None):
+    def forward(self, x, r=None):
         # Residual connection defaults to x
         if r is None:
             r = x
@@ -155,8 +158,9 @@ class ConvGRU(nn.Module):
     more fully connected layers. Output is run through a
     softmax function.
     '''
-    def __init__(self, large = True, residual_connections = False, gated = True, lstm = False,
-                 fcl = True, bidir = False, features = config.features):
+
+    def __init__(self, large=True, residual_connections=False, gated=True, lstm=False,
+                 fcl=True, bidir=False, features=config.features):
 
         super(ConvGRU, self).__init__()
 
@@ -217,10 +221,10 @@ class ConvGRU(nn.Module):
         x = self.conv1(x)
 
         if self.residual_connections:
-            x,r = self.conv2(x)
-            x,r = self.conv3(x, r)
+            x, r = self.conv2(x)
+            x, r = self.conv3(x, r)
             if self.large:
-                x,r = self.conv4(x, r)
+                x, r = self.conv4(x, r)
             x = x * r
         else:
             x = self.conv2(x)
@@ -237,7 +241,7 @@ class ConvGRU(nn.Module):
 
 
 class SelfAttentiveVAD(nn.Module):
-    def __init__(self, feature_size: int, num_layers: int, d_model: int, dropout: float):
+    def __init__(self, feature_size=24, num_layers=3, d_model=128, dropout=0.5):
         super(SelfAttentiveVAD, self).__init__()
 
         d_ff = d_model * 4
@@ -254,7 +258,9 @@ class SelfAttentiveVAD(nn.Module):
         self.log_softmax = nn.LogSoftmax(dim=2)
 
     def forward(self, features: Tensor):
+        print(features.shape)
         x = self.input_layer(features)
+        print(x.shape)
         x = self.encoder(x)
         x = self.classifier(x)
         x = self.log_softmax(x)

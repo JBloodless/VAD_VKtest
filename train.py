@@ -12,6 +12,7 @@ from torch.autograd import Variable
 from config import config
 from data_generator import DataGenerator
 from loader_preproc import DatasetLoader
+from tqdm import tqdm
 
 
 def accuracy(out, y):
@@ -22,6 +23,13 @@ def accuracy(out, y):
     out = torch.max(out, 1)[1].float()
     eq = torch.eq(out, y.float()).float()
     return torch.mean(eq)
+
+def set_seed(seed = 666):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 class FocalLoss(nn.Module):
@@ -58,7 +66,7 @@ class FocalLoss(nn.Module):
             return loss.sum()
 
 
-def net_path(epoch, title):
+def model_path(epoch, title):
     part = os.path.join(os.getcwd(), 'models', title)
     if epoch >= 0:
         return part + '_epoch' + str(epoch).zfill(3) + '.net'
@@ -66,23 +74,23 @@ def net_path(epoch, title):
         return part + '.net'
 
 
-def save_model(net, epoch, title):
+def save_model(model, epoch, title):
     if not os.path.exists(os.getcwd() + '/models'):
         os.makedirs(os.getcwd() + '/models')
-    torch.save(net, net_path(epoch, title))
+    torch.save(model, model_path(epoch, title))
 
 
-def load_model(title, epoch=None):
-    if torch.cuda.is_available():
-        return torch.load(net_path(epoch, title))
-    else:
-        return torch.load(net_path(epoch, title), map_location='cpu')
+# def load_model(title, epoch=None):
+#     if torch.cuda.is_available():
+#         return torch.load(model_path(epoch, title))
+#     else:
+#         return torch.load(model_path(epoch, title), map_location='cpu')
 
 
-def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
+def train_model(model, fig, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
                 weight_decay=1e-5, momentum=0.9, use_focal_loss=True, gamma=0.0,
                 early_stopping=False, patience=25,
-                auto_save=True, title='net', verbose=True):
+                auto_save=True, title='cGRU', verbose=True):
     '''
     Full-featured training of a given neural network.
     A number of training parameters are optionally adjusted.
@@ -95,12 +103,12 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
     dataset_tr = DatasetLoader(
         [r'D:\Datasets\LibriSpeech\train-clean-360', r'D:\Datasets\LibriSpeech\train-other-500'], r'D:\Datasets\noises',
         noise_prob=0.7)
-    generator_tr = DataGenerator(dataset_tr.mix_generator, batch_count=10000)
+    generator_tr = DataGenerator(dataset_tr.mix_generator, batch_count=config.train_size)
 
     dataset_val = DatasetLoader(
         [r'D:\Datasets\LibriSpeech\train-clean-100'], r'D:\Datasets\noises',
         noise_prob=0.7)
-    generator_val = DataGenerator(dataset_val.mix_generator, batch_count=1000)
+    generator_val = DataGenerator(dataset_val.mix_generator, batch_count=config.val_size)
 
     # Instantiate the chosen loss function
     if use_focal_loss:
@@ -122,8 +130,8 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
     # If verbose, print starting conditions
     if verbose:
         print(f'Initiating training of {title}...\n\nLearning rate: {lr}')
-        _trsz = generator_tr.batch_size * len(config.noise_snrs) if use_focal_loss else generator_tr.batch_size
-        _vlsz = generator_val.batch_size * len(config.noise_snrs) if use_focal_loss else generator_val.batch_size
+        _trsz = generator_tr.batch_count * len(config.noise_snrs) if use_focal_loss else generator_tr.batch_count
+        _vlsz = generator_val.batch_count * len(config.noise_snrs) if use_focal_loss else generator_val.batch_count
         print(f'Model parameters: {sum(p.numel() for p in model.parameters())}')
         print(f'Train/val partitions: {_trsz} | {_vlsz}')
         _critstr = f'Focal Loss (γ = {gamma})' if use_focal_loss else f'Cross-Entropy ({noise_level} dB)'
@@ -136,27 +144,26 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
     model.train()
     stalecount, maxacc = 0, 0
 
-    def plot(losses, accs, val_losses, val_accs):
+    def plot(losses, accs, val_losses, val_accs, fig=fig):
         '''
         Continously plots the training/validation loss and accuracy
         of the model being trained. This functions is only called if
         verbose is True for the training session.
         '''
-        plt.ion()
+        # plt.ion()
+        plt.clf()
         e = [i for i in range(len(losses))]
-        fig = plt.figure(figsize=(12, 4))
+        # fig = plt.figure()
         plt.subplot(1, 2, 1)
         plt.plot(e, losses, label='Loss (Training)')
 
-        if generator_val.size != 0:
-            plt.plot(e, val_losses, label='Loss (Validation)')
+        plt.plot(e, val_losses, label='Loss (Validation)')
 
         plt.legend()
         plt.subplot(1, 2, 2)
         plt.plot(e, accs, label='Accuracy (Training)')
 
-        if generator_val.size != 0:
-            plt.plot(e, val_accs, label='Accuracy (Validation)')
+        plt.plot(e, val_accs, label='Accuracy (Validation)')
 
         plt.legend()
         fig.canvas.draw()
@@ -212,12 +219,13 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
 
         # For each noise level scheduled
         for lvl in levels:
+            print('noise SNR ', lvl)
 
             # Set up generator for iteration
             generator.set_noise_level_db(lvl)
 
             # For each batch in noise level
-            for i in range(batches):
+            for i in tqdm(range(batches)):
                 # Get a new batch and run it
                 X, y = generator.get_batch(config.batch_size)
                 temp_loss, temp_acc = run_batch(X, y, epoch_loss, epoch_acc)
@@ -233,6 +241,7 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
 
     # Iterate over training epochs
     for epoch in range(epochs):
+        print('Epoch ', epoch)
 
         # Calculate loss and accuracy for that epoch and optimize
         loss, acc = run(model, generator=generator_tr, optimize=True)
@@ -240,26 +249,25 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
         accs.append(acc)
 
         # If validation data is available, calculate validation metrics
-        if generator_val.batch_size != 0:
-            model.eval()
-            val_loss, val_acc = run(model, generator=generator_val)
-            # print(val_loss, val_acc)
-            # return
-            val_losses.append(val_loss)
-            val_accs.append(val_acc)
-            model.train()
+        model.eval()
+        val_loss, val_acc = run(model, generator=generator_val)
+        # print(val_loss, val_acc)
+        # return
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+        model.train()
 
-            # Early stopping algorithm.
-            # If validation accuracy does not improve for
-            # a set amount of epochs, abort training and retrieve
-            # the best model (according to validation accuracy)
-            if epoch > 0 and val_accs[-1] <= maxacc:
-                stalecount += 1
-                if stalecount > patience and early_stopping:
-                    return
-            else:
-                stalecount = 0
-                maxacc = val_accs[-1]
+        # Early stopping algorithm.
+        # If validation accuracy does not improve for
+        # a set amount of epochs, abort training and retrieve
+        # the best model (according to validation accuracy)
+        if epoch > 0 and val_accs[-1] <= maxacc:
+            stalecount += 1
+            if stalecount > patience and early_stopping:
+                return
+        else:
+            stalecount = 0
+            maxacc = val_accs[-1]
 
         if auto_save:
             save_model(model, epoch, title)
@@ -267,9 +275,15 @@ def train_model(model, noise_level='None', epochs=30, lr=1e-3, use_adam=True,
         # Optionally plot performance metrics continously
         if verbose:
 
-            # Print measured wall-time of first epoch
-            if epoch == 0:
-                dur = str(int((time.time() - start_time) / 60))
-                print(f'\nEpoch wall-time: {dur} min')
-
             plot(losses, accs, val_losses, val_accs)
+
+
+if __name__ == '__main__':
+    from models import ConvGRU
+    print(config.device)
+
+    set_seed()
+    plt.ion()
+    fig = plt.figure()
+    cgru = ConvGRU(large=True)
+    train_model(cgru, fig, gamma=2)

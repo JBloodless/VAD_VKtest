@@ -214,7 +214,7 @@ class ConvGRU(nn.Module):
 
     def forward(self, x):
         # (batch, frames, features)
-        print(x.shape)
+        # print(x.shape)
         x = x.permute(0, 2, 1)
 
         # (batch, features/channels, frames)

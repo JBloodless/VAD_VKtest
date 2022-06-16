@@ -75,7 +75,7 @@ class dataset_loader:
 
     def split_frames(self, data):
         frames = np.array(np.array_split(data, config.frame_size))
-        print(frames.shape)
+        # print(frames.shape)
         return frames.T
 
     def get_random(self):
@@ -115,7 +115,7 @@ class dataset_loader:
 
         label_chunk = [1 if vad.is_speech(f.tobytes(), sample_rate=config.sr) else 0 for f in
                        self.split_frames(sp_chunk_bytes)]
-        print(label_chunk)
+        # print(label_chunk)
 
         return sp_chunk, label_chunk, ns_chunk, rir_data, sp_chunk_bytes
 

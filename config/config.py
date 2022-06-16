@@ -15,10 +15,13 @@ frame_size = frame_len*sr//1000
 slice_min = min_len//frame_size
 slice_max = max_len//frame_size
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-batch_size = 2048
+batch_size = 128
 features = 24
+val_size = 256
+train_size = 1024
+test_size = 128
 
 noise_snrs = [-5, 0, 5, 10]
 

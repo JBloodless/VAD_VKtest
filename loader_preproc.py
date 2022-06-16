@@ -4,7 +4,6 @@ import random
 import numpy as np
 import soundfile as sf
 import json
-from pydub import AudioSegment
 
 from config import config
 import torch
@@ -16,7 +15,7 @@ from python_speech_features import mfcc, delta
 
 def split_frames(data):
     frames = np.array(np.array_split(data, config.frame_size))
-    print(frames.shape)
+    # print(frames.shape)
     return frames.T
 
 
@@ -89,7 +88,7 @@ class DatasetLoader:
         sp_data, _ = sf.read(chosen_sp[0])
         ns_data, _ = sf.read(chosen_ns)  # TODO: force resample
         rir_data = _
-        print(chosen_sp)
+        # print(chosen_sp)
 
         with open(chosen_sp[1]) as json_file:
             json_label = json.load(json_file)
@@ -124,7 +123,7 @@ class DatasetLoader:
 
     def mix_generator(self, snr=0):
         sp, lb, ns, rir = self.get_random()
-        print(self.isrir, self.isns)
+        # print(self.isrir, self.isns)
         if self.isrir and self.rir_path:
             mult = np.abs(rir).max() + 1e-3
             mult = 1 / mult

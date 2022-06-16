@@ -8,7 +8,7 @@ class DataGenerator:
         self.batch_count = batch_count
         self.generator = mix_gen
         self.noise_level = None
-        self.batch_size = None
+        self.batch_size = config.batch_size
 
     def set_noise_level_db(self, level):
 
@@ -46,4 +46,4 @@ if __name__ == '__main__':
     generator = DataGenerator(dataset.mix_generator, batch_count=10000)
     generator.set_noise_level_db(0)
     X, y = generator.get_batch(32)
-    print(X.shape, y.shape)
+    # print(X.shape, y.shape)

@@ -18,7 +18,7 @@ def test_predict(model, noise_level):
 
     # Set up an instance of data generator using default partitions
     dataset_test = DatasetLoader(
-        [r'D:\Datasets\LibriSpeech\dev_clean'], r'D:\Datasets\noises',
+        [r'D:\Datasets\LibriSpeech\dev_clean', ], r'D:\Datasets\noises',
         noise_prob=0.7)
     generator_test = DataGenerator(dataset_test.mix_generator, batch_count=config.test_size)
 
@@ -128,6 +128,6 @@ def reject_metrics(model, frr=1, far=1):
 
 if __name__ == '__main__':
     set_seed()
-    model = torch.load(r'D:\vk_test\pretrained\gru_large_epoch014.net')
+    model = torch.load(r'models/cGRU_epoch029.net')
     roc_auc(model, 0)
     reject_metrics(model, frr=1, far=1)

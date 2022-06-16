@@ -63,11 +63,12 @@ class DatasetLoader:
         for subset in speech_path:
             for path, subdirs, files in os.walk(subset):
                 for name in files:
-                    # print(name)
+                    print(name)
                     if name.endswith('.wav') or name.endswith('.flac') and os.path.exists(
                             os.path.join(subset + '_labels', name.split('.')[0] + '.json')):
                         self.all_speech.append(
                             [os.path.join(path, name), os.path.join(subset + '_labels', name.split('.')[0] + '.json')])
+                        # print(self.all_speech)
         for path, subdirs, files in os.walk(self.noise_path):
             for name in files:
                 # print(name)

@@ -12,9 +12,7 @@ class DataGenerator:
         self.noise_level = None
         self.batch_size = config.batch_size
 
-
     def set_noise_level_db(self, level):
-
         if level not in config.noise_snrs:
             raise Exception(f'Noise level "{level}" not supported!')
 

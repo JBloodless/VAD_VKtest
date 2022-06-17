@@ -77,56 +77,7 @@ def roc_auc(model, noise_lvl):
     plt.show()
 
 
-def reject_metrics(model, frr=1, far=1):
-    '''
-    Computes the confusion matrix for a given network.
-    '''
-
-    # Evaluate predictions using threshold
-
-    def apply_threshold(y_score, t=0.5):
-        return [1 if y >= t else 0 for idx, y in enumerate(y_score)]
-
-    def search(y_true, y_score, frr_target, far_target):
-        cond = {}
-
-        # Quick hack for initial threshold level to hit 1% FRR a bit faster.
-        t = 1e-9
-
-        # Compute FAR for a fixed FRR
-        while t < 1.0:
-
-            tn, fp, fn, tp = confusion_matrix(y_true, apply_threshold(y_score, t)).ravel()
-
-            far = (fp * 100) / (fp + tn)
-            frr = (fn * 100) / (fn + tp)
-
-            if frr >= frr_target:
-                cond['fixfrr'] = far, frr
-            elif far >= far_target:
-                cond['fixfar'] = far, frr
-            elif far == frr:
-                cond['farfrr'] = far, frr
-
-            t *= 1.1
-
-        # Return closest result if no good match found.
-        return cond
-
-    print('Network metrics:')
-
-    # For each noise level
-    for lvl in config.noise_snrs:
-        # Make predictions
-        y_true, y_score = test_predict(model, lvl)
-        cond = search(y_true, y_score, frr, far)
-        print('FAR: %0.2f%% for fixed FRR at %0.2f%% and noise level' % cond['fixfrr'], lvl)
-        print('FRR: %0.2f%% for fixed FAR at %0.2f%% and noise level' % cond['fixfar'], lvl)
-        print('FAR: %0.2f%% == FRR at %0.2f%% and noise level' % cond['farfrr'], lvl)
-
-
 if __name__ == '__main__':
     set_seed()
     model = torch.load(r'models/cGRU_epoch029.net')
     roc_auc(model, 0)
-    reject_metrics(model, frr=1, far=1)

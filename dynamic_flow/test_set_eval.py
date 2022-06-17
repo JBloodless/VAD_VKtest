@@ -16,9 +16,8 @@ def test_predict(model, noise_level):
     Computes predictions on test data using given network.
     '''
 
-    # Set up an instance of data generator using default partitions
     dataset_test = DatasetLoader(
-        [r'D:\Datasets\LibriSpeech\dev_clean', ], r'D:\Datasets\noises',
+        config.test_sets, config.noise_sets,
         noise_prob=0.7)
     generator_test = DataGenerator(dataset_test.mix_generator, batch_count=config.test_size)
 
@@ -32,7 +31,7 @@ def test_predict(model, noise_level):
     y_true, y_score = [], []
 
     for i in range(generator_test.batch_count):
-        X, y = generator_test.get_batch(config.batch_size)
+        X, y = generator_test.get_batch(config.batch_size, n_frames=config.train_frames)
         X = Variable(torch.from_numpy(np.array(X)).float())
         y = Variable(torch.from_numpy(np.array(y))).long()
 

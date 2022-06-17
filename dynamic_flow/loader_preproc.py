@@ -63,7 +63,7 @@ class DatasetLoader:
         for subset in speech_path:
             for path, subdirs, files in os.walk(subset):
                 for name in files:
-                    print(name)
+                    # print(name)
                     if name.endswith('.wav') or name.endswith('.flac') and os.path.exists(
                             os.path.join(subset + '_labels', name.split('.')[0] + '.json')):
                         self.all_speech.append(
@@ -87,7 +87,7 @@ class DatasetLoader:
         chosen_sp = random.choice(self.all_speech)
         chosen_ns = random.choice(self.all_noise)
         sp_data, _ = sf.read(chosen_sp[0])
-        ns_data, _ = sf.read(chosen_ns)  # TODO: force resample
+        ns_data, _ = sf.read(chosen_ns)
         rir_data = _
         # print(chosen_sp)
 
@@ -122,7 +122,7 @@ class DatasetLoader:
 
         return sp_chunk, label_chunk, ns_chunk, rir_data,
 
-    def mix_generator(self, snr=0):
+    def mix_generator(self, n_frames, snr=0):
         sp, lb, ns, rir = self.get_random()
         # print(self.isrir, self.isns)
         if self.isrir and self.rir_path:
@@ -137,9 +137,10 @@ class DatasetLoader:
         mix_mfcc = mfcc(mix_data, samplerate=config.sr, winlen=2 * config.frame_len / 1000,
                         winstep=config.frame_len / 1000,
                         nfft=2048)
-        mix_mfcc = mix_mfcc[:, 1:]
+        mix_mfcc = mix_mfcc[:n_frames, 1:]   # надо падить до n_frames
         mix_delta = delta(mix_mfcc, 1)
-        return mix_mfcc, mix_delta, lb, mix_data
+
+        return mix_mfcc, mix_delta[:n_frames], lb[:n_frames*config.frame_size], mix_data[:n_frames*config.frame_size]
 
 
 if __name__ == '__main__':
